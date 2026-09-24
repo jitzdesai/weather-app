@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "weather-app: prepare environment",
+      "type": "shell",
+      "command": "uv",
+      "args": ["sync", "--python", "3.12"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
