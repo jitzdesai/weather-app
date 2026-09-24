@@ -7,6 +7,7 @@ import sys
 
 
 PYTHON_VERSION = "3.12"
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def ensure_environment():
@@ -20,8 +21,20 @@ def ensure_environment():
             "Install uv from https://docs.astral.sh/uv/getting-started/installation/."
         )
 
-    command = [uv_path, "run", "--python", PYTHON_VERSION, "python", *sys.argv]
-    raise SystemExit(subprocess.call(command, env=os.environ.copy()))
+    command = [
+        uv_path,
+        "run",
+        "--project",
+        PROJECT_ROOT,
+        "--python",
+        PYTHON_VERSION,
+        "python",
+        os.path.abspath(__file__),
+        *sys.argv[1:],
+    ]
+    raise SystemExit(
+        subprocess.call(command, cwd=PROJECT_ROOT, env=os.environ.copy())
+    )
 
 
 ensure_environment()
