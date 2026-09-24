@@ -3,11 +3,10 @@
   "configurations": [
     {
       "name": "Weather App",
-      "type": "debugpy",
+      "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/weather_app.py",
       "python": "${workspaceFolder}/.venv/bin/python",
-      "preLaunchTask": "weather-app: prepare environment",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}"
     }
