@@ -1,5 +1,31 @@
 """Simple weather app: pick a city, see today's temperature and a 7-day forecast."""
 
+import os
+import shutil
+import subprocess
+import sys
+
+
+PYTHON_VERSION = "3.12"
+
+
+def ensure_environment():
+    if sys.prefix != sys.base_prefix:
+        return
+
+    uv_path = shutil.which("uv")
+    if uv_path is None:
+        raise RuntimeError(
+            "The app requires uv to create its Python environment. "
+            "Install uv from https://docs.astral.sh/uv/getting-started/installation/."
+        )
+
+    command = [uv_path, "run", "--python", PYTHON_VERSION, "python", *sys.argv]
+    raise SystemExit(subprocess.call(command, env=os.environ.copy()))
+
+
+ensure_environment()
+
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -9,16 +35,26 @@ GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 REQUEST_TIMEOUT = 10
 
-DEFAULT_CITIES = [
-    "London",
-    "New York",
-    "Tokyo",
-    "Paris",
-    "Sydney",
-    "Mumbai",
-    "Cairo",
-    "Toronto",
-]
+CITY_DIRECTORY = {
+    "Africa": {
+        "Egypt": ["Cairo"],
+    },
+    "Asia": {
+        "India": ["Mumbai"],
+        "Japan": ["Tokyo"],
+    },
+    "Europe": {
+        "France": ["Paris"],
+        "United Kingdom": ["London"],
+    },
+    "North America": {
+        "Canada": ["Toronto"],
+        "United States": ["New York"],
+    },
+    "Oceania": {
+        "Australia": ["Sydney"],
+    },
+}
 
 WEATHER_CODES = {
     0: "Clear sky",
@@ -96,16 +132,46 @@ class WeatherApp(tk.Tk):
         top_frame = ttk.Frame(self, padding=10)
         top_frame.pack(fill="x")
 
-        ttk.Label(top_frame, text="City:").pack(side="left")
+        ttk.Label(top_frame, text="Region:").grid(row=0, column=0, sticky="w")
+        ttk.Label(top_frame, text="Country:").grid(row=0, column=1, sticky="w", padx=8)
+        ttk.Label(top_frame, text="City:").grid(row=0, column=2, sticky="w")
 
-        self.city_var = tk.StringVar(value=DEFAULT_CITIES[0])
-        self.city_combo = ttk.Combobox(
-            top_frame, textvariable=self.city_var, values=DEFAULT_CITIES
+        self.region_var = tk.StringVar()
+        self.country_var = tk.StringVar()
+        self.city_var = tk.StringVar()
+
+        self.region_combo = ttk.Combobox(
+            top_frame,
+            textvariable=self.region_var,
+            values=sorted(CITY_DIRECTORY),
+            state="readonly",
         )
-        self.city_combo.pack(side="left", fill="x", expand=True, padx=8)
+        self.region_combo.grid(row=1, column=0, sticky="ew")
+
+        self.country_combo = ttk.Combobox(
+            top_frame, textvariable=self.country_var, state="readonly"
+        )
+        self.country_combo.grid(row=1, column=1, sticky="ew", padx=8)
+
+        self.city_combo = ttk.Combobox(
+            top_frame, textvariable=self.city_var, state="readonly"
+        )
+        self.city_combo.grid(row=1, column=2, sticky="ew")
+
+        top_frame.columnconfigure(0, weight=1)
+        top_frame.columnconfigure(1, weight=1)
+        top_frame.columnconfigure(2, weight=1)
+
+        self.region_combo.bind("<<ComboboxSelected>>", self._on_region_selected)
+        self.country_combo.bind("<<ComboboxSelected>>", self._on_country_selected)
         self.city_combo.bind("<Return>", lambda _event: self.on_search())
 
-        ttk.Button(top_frame, text="Search", command=self.on_search).pack(side="left")
+        ttk.Button(top_frame, text="Search", command=self.on_search).grid(
+            row=2, column=0, columnspan=3, sticky="e", pady=(8, 0)
+        )
+
+        self.region_combo.current(0)
+        self._on_region_selected()
 
         self.status_var = tk.StringVar(value="Pick a city and press Search.")
         ttk.Label(self, textvariable=self.status_var, padding=(10, 0)).pack(fill="x")
@@ -137,6 +203,17 @@ class WeatherApp(tk.Tk):
         self.forecast_tree.column("high", width=70, anchor="center")
         self.forecast_tree.column("low", width=70, anchor="center")
         self.forecast_tree.pack(fill="both", expand=True)
+
+    def _on_region_selected(self, _event=None):
+        countries = sorted(CITY_DIRECTORY[self.region_var.get()])
+        self.country_combo.configure(values=countries)
+        self.country_combo.current(0)
+        self._on_country_selected()
+
+    def _on_country_selected(self, _event=None):
+        cities = CITY_DIRECTORY[self.region_var.get()][self.country_var.get()]
+        self.city_combo.configure(values=cities)
+        self.city_combo.current(0)
 
     def on_search(self):
         city = self.city_var.get().strip()
